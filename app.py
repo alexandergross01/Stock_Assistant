@@ -70,7 +70,7 @@ class Stock_Assistant():
                 st.plotly_chart(dict["fig"])
                 st.text("Current sentiment: "+ str(dict["current_sentiment"])+ "%")
 
-            st.subheader("LSTM-based 7-day stock price prediction model")
+            st.subheader("GRU-based 7-day stock price prediction model")
 
             with st.spinner("Compiling GRU model.."):
                 nn = GRU_Model()
