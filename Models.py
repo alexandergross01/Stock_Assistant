@@ -9,6 +9,10 @@ import matplotlib.dates as mdates
 import seaborn as sns
 import datetime as dt
 from FinBERT_Training import FinBERT
+import plotly.graph_objs as go  
+import plotly.io as pio
+pio.templates
+pd.options.plotting.backend = "plotly"
 
 class Algo_Models():
     def __init__(self, ticker) -> None:
@@ -71,7 +75,7 @@ class Algo_Models():
             else:
                 return "Uptrend and no signal"
 
-    def finbert_headlines_sentiment(self):
+    def finbert_headlines_sentiment(self): 
         self.stock_data.parse_articles()
         articles_df = self.stock_data.headlines
         articles_list = articles_df["headline"].tolist()
@@ -97,7 +101,7 @@ class Algo_Models():
         fig = sentiments_df["roll_avg"].plot(title="Sentiment Analysis of the last 12 www.marketwatch.com articles about " + self.ticker, 
         
         template="plotly_dark",
-        labels=dict(index="12 most recent article headlines", value="sentiment  score (rolling avg. of window size 5)"))
+        labels=dict(index="17 most recent article headlines", value="sentiment  score (rolling avg. of window size 5)"))
         fig.update_traces(line=dict(color="#3D9140", width=3))
         fig.update_layout(yaxis_range=[-100,100])
         fig.update_layout(xaxis_range=[0,12])
@@ -181,9 +185,8 @@ class GRU_Model(nn.Module):
         self.original = pd.DataFrame(self.scalar.inverse_transform(self.y_train.detach().numpy()))
 
 
-    def plot_train_res(self):
-        sns.set_style("darkgrid")    
-
+    def plot_train_res(self):   
+        sns.set_style("white") 
         fig = plt.figure()
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
 
@@ -221,23 +224,97 @@ class GRU_Model(nn.Module):
         self.prediction_outlook = self.scalar.inverse_transform(self.prediction_outlook.reshape(-1,1))
 
     def plotting_prediction(self):
-        fig = plt.figure()
+        sns.set_style("white") 
+        plt.figure(figsize=(50,20))
         actual_dates = self.data
         actual_dates.reset_index(inplace=True)
         
-        actual_dates['Date'] = actual_dates['Date'].dt.strftime('%Y/%m/%d')
-        plt.plot(actual_dates['Date'], actual_dates['Close'])
+        actual_dates['Date'] = pd.to_datetime(actual_dates['Date'])
+        #plt.plot(actual_dates['Date'], actual_dates['Close'])
       
         locator = mdates.MonthLocator()
         X = plt.gca().xaxis
         X.set_major_locator(locator)
 
         pred_dates = pd.DataFrame({"Date":self.prediction_dates.to_pydatetime()})
-        pred_dates['Date'] = pred_dates['Date'].dt.strftime('%Y/%m/%d')
+        pred_dates['Date'] = pd.to_datetime(pred_dates['Date'])
+        #pred_dates['Date'] = pred_dates['Date'].dt.strftime('%Y/%m/%d')
 
+        #plt.plot(pred_dates['Date'], self.prediction_outlook[-8:], color='r')
+        plot_1 = go.Scatter(
+            x = actual_dates['Date'].iloc[-120:],
+            y = actual_dates['Close'].iloc[-120:],
+            mode = 'lines',
+            name = 'Historical Data (2 years)',
+            line=dict(width=1,color='#3D9140'))
+        plot_2 = go.Scatter(
+            x = pred_dates['Date'],
+            y = self.prediction_outlook[-8:].squeeze(),
+            mode = 'lines',
+            name = '7-day Prediction',
+            line=dict(width=1,color="#EE3B3B"))
+        plot_3 = go.Scatter(
+            x = actual_dates['Date'].iloc[-1:],
+            y = actual_dates['Close'].iloc[-1:],
+            mode = 'markers',
+            name = 'Latest Actual Closing Price',
+            line=dict(width=1))
+    
+        # adding bollinger bands to plot
+        m = Algo_Models(self.ticker)
+        _, data = m.band_calc(20, 2)
+        plot_4 = go.Scatter(
+            x = actual_dates['Date'].iloc[-120:],
+            y = data['Upper'].iloc[-120:],
+            mode = 'lines',
+            name = 'Upper Band',
+            line=dict(width=1,color='#8A2525'))
+        plot_5 = go.Scatter(
+            x = actual_dates['Date'].iloc[-120:],
+            y = data['Lower'].iloc[-120:],
+            mode = 'lines',
+            name = 'Lower Band',
+            line=dict(width=1,color='#0026FF'))
+        
+        layout = go.Layout(
+            title = 'Next 7 days stock price prediction of ' + str(self.ticker),
+            xaxis = {'title' : "Date"},
+            yaxis = {'title' : "Price ($)"}
+        )
         #breakpoint()
-        plt.plot(pred_dates['Date'], self.prediction_outlook[-8:], color='r')
-        #plt.show()
+        fig = go.Figure(data=[plot_1, plot_2,plot_3,plot_4, plot_5], layout=layout)
+        fig.update_layout(template='plotly_white',autosize=True)
+        fig.update_layout(legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=1.02,
+                            xanchor="right",
+                            x=1
+                          ))
+        # fig.update_layout(legend=dict(
+        #     orientation="h",
+        #     yanchor="bottom",
+        #     y=1.02,
+        #     xanchor="right",
+        #     x=1),
+        #     annotations = [dict(x=0.5,
+        #                         y=0, 
+        #                         xref='paper',
+        #                         yref='paper',
+        #                         text="Current In Sample R- Squared : " + str(r_squared_score*100) + " % \n",
+        #                         showarrow = False)],
+        #     xaxis=dict(showgrid=False),
+        #     yaxis=dict(showgrid=False)
+            
+
+        #                 )
+        # fig.add_annotation(x=0.5, 
+        #                    y=0.05,
+        #                    xref='paper',
+        #                    yref='paper',
+        #                    text="Current In Sample Root Mean Square Error : " + str(round(rmse,2)) + " % ",
+        #                    showarrow=False)
+        #fig.show()
         return fig
 
 
@@ -250,7 +327,7 @@ if __name__ == '__main__':
     
     m.finbert_headlines_sentiment()
     s = GRU_Model(1,32,2,1)
-    s.train('AMZN', 20, 10)
+    s.train('AMZN', 20, 100)
     #s.plot_train_res()
 
     with torch.no_grad():

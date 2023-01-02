@@ -63,7 +63,7 @@ class Stock_Data():
         counter = 1
 
         for art in articles:
-            if counter <= 12:
+            if counter <= 17:
                 title = art.text.strip()
                 if title is None:
                         break

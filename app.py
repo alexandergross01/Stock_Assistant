@@ -20,10 +20,11 @@ class Stock_Assistant():
             self.option_name = st.selectbox("Select Stock:", self.tickers.keys())
             self.selection = self.tickers[self.option_name]
             self.curr_time = datetime.now()
-            'Selected: ', self.option_name, '(',self.selection, ')',
-            'Last Execution:', self.curr_time
-
             models = Algo_Models(self.selection)
+            st.text('Selected: '+ self.option_name+' ('+self.selection+ ')')
+            st.text('Last Execution: '+ self.curr_time.strftime("%m/%d/%Y, %H:%M:%S"))
+            st.text('Stock Market Status: '+ models.stock_data.market_status)       
+            
             with st.spinner('Loading stock data...'):
                 technical_analysis_methods_outputs = {
                     'Technical Analysis Method': [
@@ -67,17 +68,17 @@ class Stock_Assistant():
             with st.spinner("Connecting with www.marketwatch.com..."):
                 dict = models.finbert_headlines_sentiment()
                 st.plotly_chart(dict["fig"])
-                "Current sentiment:", dict["current_sentiment"], "%"
+                st.text("Current sentiment: "+ str(dict["current_sentiment"])+ "%")
 
             st.subheader("LSTM-based 7-day stock price prediction model")
 
             with st.spinner("Compiling GRU model.."):
                 nn = GRU_Model()
-                nn.train(self.selection, 25, 50)
+                nn.train(self.selection, 20, 60)
 
                 with torch.no_grad():
                     nn.lookahead(7)
-                st.pyplot(fig=nn.plotting_prediction())
+                st.plotly_chart(nn.plotting_prediction())
 
 if __name__ == "__main__":
     all_tickers = {
@@ -87,11 +88,11 @@ if __name__ == "__main__":
                 "Paypal":"PYPL",
                 "Amazon":"AMZN",
                 "Spotify":"SPOT",
-                #"Twitter":"TWTR",
                 "AirBnB":"ABNB",
                 "Uber":"UBER",
                 "Schwab": "SCHD",
-                "Google":"GOOG"
+                "Google":"GOOG",
+                "Intel":"INTC"
                 }
     Assistant = Stock_Assistant(all_tickers)
     Assistant.run()
